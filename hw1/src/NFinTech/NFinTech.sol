@@ -76,29 +76,86 @@ contract NFinTech is IERC721 {
 
     function setApprovalForAll(address operator, bool approved) external {
         // TODO: please add your implementaiton here
+        if (operator == address(0))
+        {
+            revert();
+        }
+        else{
+            address owner = msg.sender;
+            emit ApprovalForAll(owner, operator, approved);
+            _operatorApproval[owner][operator] = approved;
+        }
     }
 
     function isApprovedForAll(address owner, address operator) public view returns (bool) {
         // TODO: please add your implementaiton here
+        return _operatorApproval[owner][operator];
     }
 
     function approve(address to, uint256 tokenId) external {
         // TODO: please add your implementaiton here
+        address owner = msg.sender;
+        if (owner == _owner[tokenId]){
+            _tokenApproval[tokenId] = to;
+            emit Approval(owner, to, tokenId);
+        }
+        else if (_operatorApproval[_owner[tokenId]][owner] == true){
+            _tokenApproval[tokenId] = to;
+            emit Approval(_owner[tokenId], to, tokenId);
+        }
+        else {
+            revert();
+        }
     }
 
     function getApproved(uint256 tokenId) public view returns (address operator) {
         // TODO: please add your implementaiton here
+        operator = _tokenApproval[tokenId];
+        return operator;
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public {
         // TODO: please add your implementaiton here
+        address msg_s = msg.sender;
+        address owner = _owner[tokenId];
+        if (to == address(0)){
+            revert();
+        }
+        if (owner == msg_s){
+            _balances[from] -= 1;
+            _balances[to] += 1;
+            _owner[tokenId] = to;
+            emit Transfer(from, to, tokenId);
+        }
+        else if (_tokenApproval[tokenId] == msg_s){
+            _balances[from] -= 1;
+            _balances[to] += 1;
+            _owner[tokenId] = to;
+            emit Transfer(from, to, tokenId);
+        }
+        else if (_operatorApproval[owner][msg_s] == true){
+            _balances[from] -= 1;
+            _balances[to] += 1;
+            _owner[tokenId] = to;
+            emit Transfer(from, to, tokenId);
+        }
+        else {
+            revert();
+        }
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) public {
         // TODO: please add your implementaiton here
+        NFinTech.safeTransferFrom(from, to, tokenId);
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public {
         // TODO: please add your implementaiton here
+        NFinTech.transferFrom(from, to, tokenId);
+        bytes4 value = IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, "");
+        if (value == bytes4(keccak256("approve(address,uint256)")))
+        {
+            revert();
+        }
     }
 }
